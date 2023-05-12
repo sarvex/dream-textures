@@ -69,9 +69,11 @@ class DreamTexture(bpy.types.Operator):
                     init_image = scene.init_img
                 case 'open_editor':
                     for area in screen.areas:
-                        if area.type == 'IMAGE_EDITOR':
-                            if area.spaces.active.image is not None:
-                                init_image = area.spaces.active.image
+                        if (
+                            area.type == 'IMAGE_EDITOR'
+                            and area.spaces.active.image is not None
+                        ):
+                            init_image = area.spaces.active.image
         if init_image is not None:
             init_image = np.flipud(
                 (np.array(init_image.pixels) * 255)
@@ -86,6 +88,7 @@ class DreamTexture(bpy.types.Operator):
                     if region.type == "UI":
                         region.tag_redraw()
             return None
+
         bpy.types.Scene.dream_textures_progress = bpy.props.IntProperty(name="", default=0, min=0, max=generated_args['steps'], update=step_progress_update)
         scene.dream_textures_info = "Starting..."
 
@@ -117,7 +120,11 @@ class DreamTexture(bpy.types.Operator):
                 seed = result.seeds[i]
                 prompt_string = context.scene.dream_textures_prompt.prompt_structure_token_subject
                 seed_str_length = len(str(seed))
-                trim_aware_name = (prompt_string[:54 - seed_str_length] + '..') if len(prompt_string) > 54 else prompt_string
+                trim_aware_name = (
+                    f'{prompt_string[:54 - seed_str_length]}..'
+                    if len(prompt_string) > 54
+                    else prompt_string
+                )
                 name_with_trimmed_prompt = f"{trim_aware_name} ({seed})"
                 image = bpy_image(name_with_trimmed_prompt, result_image.shape[1], result_image.shape[0], result_image.ravel(), last_data_block)
                 last_data_block = None
@@ -162,7 +169,9 @@ class DreamTexture(bpy.types.Operator):
             scene.dream_textures_progress = 0
             if hasattr(gen, '_active_generation_future'):
                 del gen._active_generation_future
-            eval('bpy.ops.' + NotifyResult.bl_idname)('INVOKE_DEFAULT', exception=repr(exception))
+            eval(f'bpy.ops.{NotifyResult.bl_idname}')(
+                'INVOKE_DEFAULT', exception=repr(exception)
+            )
             raise exception
 
         original_prompt = generated_args["prompt"]
@@ -245,6 +254,7 @@ class DreamTexture(bpy.types.Operator):
             f.add_response_callback(step_callback)
             f.add_exception_callback(exception_callback)
             f.add_done_callback(done_callback)
+
         generate_next()
         return {"FINISHED"}
 

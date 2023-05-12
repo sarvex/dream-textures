@@ -24,7 +24,7 @@ class RecallHistoryEntry(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     @classmethod
-    def poll(self, context):
+    def poll(cls, context):
         return context.scene.dream_textures_history_selection is not None
     
     def execute(self, context):
@@ -44,12 +44,14 @@ class RecallHistoryEntry(bpy.types.Operator):
             # note: when there is more than one image with the seed in it's name, do nothing. Same when no image with that seed is available.
             if prop == 'hash':
                 hash_string = str(getattr(selection, prop))
-                existing_image = None
-                # accessing custom properties for image datablocks in Blender is still a bit cumbersome
-                for i in bpy.data.images:
-                    if i.get('dream_textures_hash', None) == hash_string:
-                        existing_image = i
-                        break
+                existing_image = next(
+                    (
+                        i
+                        for i in bpy.data.images
+                        if i.get('dream_textures_hash', None) == hash_string
+                    ),
+                    None,
+                )
                 if existing_image is not None:
                     for area in context.screen.areas:
                         if area.type != 'IMAGE_EDITOR':
@@ -76,7 +78,7 @@ class RemoveHistorySelection(bpy.types.Operator):
     bl_options = {'REGISTER'}
 
     @classmethod
-    def poll(self, context):
+    def poll(cls, context):
         return context.scene.dream_textures_history_selection is not None
     
     def execute(self, context):
@@ -98,7 +100,7 @@ class ExportHistorySelection(bpy.types.Operator, ExportHelper):
     )
 
     @classmethod
-    def poll(self, context):
+    def poll(cls, context):
         return context.scene.dream_textures_history_selection is not None
     
     def invoke(self, context, event):

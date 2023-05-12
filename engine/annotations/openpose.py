@@ -40,9 +40,11 @@ class Bone(enum.IntEnum):
         if not getattr(armature.dream_textures_openpose, self.name):
             return None, None
         for bone in pose.bones:
-            if bone.bone.dream_textures_openpose.enabled:
-                if bone.bone.dream_textures_openpose.bone == str(self.value):
-                    return bone, Side(int(bone.bone.dream_textures_openpose.side))
+            if (
+                bone.bone.dream_textures_openpose.enabled
+                and bone.bone.dream_textures_openpose.bone == str(self.value)
+            ):
+                return bone, Side(int(bone.bone.dream_textures_openpose.side))
         options = self.name_detection_options()
         for option in options:
             if (result := pose.bones.get(option[0], None)) is not None:

@@ -11,13 +11,12 @@ class NotifyResult(bpy.types.Operator):
     exception: bpy.props.StringProperty(name="Exception", default="")
 
     def modal(self, context, event):
-        if self.exception != "":
-            self.report({'ERROR'}, f"""An error occurred while generating. Check the issues tab on GitHub to see if this has been reported before:
+        if self.exception == "":
+            return {'FINISHED'}
+        self.report({'ERROR'}, f"""An error occurred while generating. Check the issues tab on GitHub to see if this has been reported before:
 
 {self.exception}""")
-            return {'CANCELLED'}
-        else:
-            return {'FINISHED'}
+        return {'CANCELLED'}
 
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)

@@ -120,8 +120,7 @@ def hf_list_installed_models(self) -> list[Model]:
                     return None
                 for revision in os.listdir(refs_folder):
                     ref_path = os.path.join(storage_folder, "refs", revision)
-                    with open(ref_path) as f:
-                        commit_hash = f.read()
+                    commit_hash = Path(ref_path).read_text()
                     snapshot_folder = os.path.join(storage_folder, "snapshots", commit_hash)
                     if (detected_type := detect_model_type(snapshot_folder)) != ModelType.UNKNOWN:
                         model_type = detected_type
@@ -135,12 +134,14 @@ def hf_list_installed_models(self) -> list[Model]:
                 -1,
                 model_type
             )
+
         return [
             model for model in (
                 _map_model(file) for file in os.listdir(cache_dir) if os.path.isdir(os.path.join(cache_dir, file))
             )
             if model is not None
         ]
+
     new_cache_list = list_dir(DIFFUSERS_CACHE)
     model_ids = [os.path.basename(m.id) for m in new_cache_list]
     for model in list_dir(old_diffusers_cache):

@@ -37,7 +37,7 @@ class DreamTexturesRenderEngine(bpy.types.RenderEngine):
                 )
             else:
                 return result
-        
+
         result = self.begin_result(0, 0, scene.render.resolution_x, scene.render.resolution_y)
         layer = result.layers[0].passes["Combined"]
         self.update_result(result)
@@ -46,19 +46,22 @@ class DreamTexturesRenderEngine(bpy.types.RenderEngine):
             progress = 0
             def node_begin(node):
                 self.update_stats("Node", node.name)
+
             def node_update(response):
                 if isinstance(response, np.ndarray):
                     node_result = prepare_result(response)
                     layer.rect = node_result.reshape(-1, node_result.shape[-1])
                     self.update_result(result)
+
             def node_end(_):
                 nonlocal progress
                 progress += 1
                 self.update_progress(progress / len(scene.dream_textures_render_engine.node_tree.nodes))
+
             group_outputs = node_executor.execute(scene.dream_textures_render_engine.node_tree, depsgraph, node_begin=node_begin, node_update=node_update, node_end=node_end, test_break=self.test_break)
             node_result = group_outputs[0][1]
             for k, v in group_outputs:
-                if type(v) == int or type(v) == str or type(v) == float:
+                if type(v) in [int, str, float]:
                     self.get_result().stamp_data_add_field(k, str(v))
             node_result = prepare_result(node_result)
         except Exception as error:
@@ -70,7 +73,7 @@ class DreamTexturesRenderEngine(bpy.types.RenderEngine):
         if "Depth" in result.layers[0].passes:
             z = depth.render_depth_map(depsgraph, invert=True)
             result.layers[0].passes["Depth"].rect = z.reshape((scene.render.resolution_x * scene.render.resolution_y, 1))
-        
+
         self.end_result(result)
     
     def update_render_passes(self, scene=None, renderlayer=None):
@@ -86,12 +89,12 @@ class NewEngineNodeTree(bpy.types.Operator):
         return {'FINISHED'}
 
 def draw_device(self, context):
-    scene = context.scene
     layout = self.layout
     layout.use_property_split = True
     layout.use_property_decorate = False
 
     if context.engine == DreamTexturesRenderEngine.bl_idname:
+        scene = context.scene
         layout.template_ID(scene.dream_textures_render_engine, "node_tree", text="Node Tree", new=NewEngineNodeTree.bl_idname)
 
 def _poll_node_tree(self, value):
@@ -107,6 +110,7 @@ def engine_panels():
     bpy.types.DATA_PT_lens.COMPAT_ENGINES.add(DreamTexturesRenderEngine.bl_idname)
     def get_prompt(context):
         return context.scene.dream_textures_engine_prompt
+
     class RenderPanel(bpy.types.Panel, RenderButtonsPanel):
         COMPAT_ENGINES = {DreamTexturesRenderEngine.bl_idname}
 
@@ -117,7 +121,7 @@ def engine_panels():
 
         def draw(self, context):
             self.layout.use_property_decorate = True
-    
+
     class ViewLayerPanel(bpy.types.Panel, ViewLayerButtonsPanel):
         COMPAT_ENGINES = {DreamTexturesRenderEngine.bl_idname}
 
@@ -127,9 +131,11 @@ def engine_panels():
     # Render Properties
     yield from optimization_panels(RenderPanel, 'engine', get_prompt, "")
 
+
+
     class NodeTreeInputsPanel(RenderPanel):
         """Create a subpanel for format options"""
-        bl_idname = f"DREAM_PT_dream_panel_node_tree_inputs_engine"
+        bl_idname = "DREAM_PT_dream_panel_node_tree_inputs_engine"
         bl_label = "Inputs"
 
         def draw(self, context):
@@ -140,9 +146,10 @@ def engine_panels():
             if context.scene.dream_textures_render_engine.node_tree is not None:
                 for input in context.scene.dream_textures_render_engine.node_tree.inputs:
                     layout.prop(input, "default_value", text=input.name)
+
+
     yield NodeTreeInputsPanel
 
-    # View Layer
     class ViewLayerPassesPanel(ViewLayerPanel):
         bl_idname = "DREAM_PT_dream_panel_view_layer_passes"
         bl_label = "Passes"
@@ -160,7 +167,6 @@ def engine_panels():
             col.prop(view_layer, "use_pass_normal")
     yield ViewLayerPassesPanel
 
-    # Bone properties
     class OpenPoseArmaturePanel(bpy.types.Panel):
         bl_idname = "DREAM_PT_dream_textures_armature_openpose"
         bl_label = "OpenPose"
@@ -171,7 +177,7 @@ def engine_panels():
         @classmethod
         def poll(cls, context):
             return context.armature
-        
+
         def draw_header(self, context):
             bone = context.bone or context.edit_bone
             if bone:
@@ -223,7 +229,7 @@ def engine_panels():
         @classmethod
         def poll(cls, context):
             return context.bone and context.scene.render.engine == 'DREAM_TEXTURES'
-        
+
         def draw_header(self, context):
             bone = context.bone
             if bone:
@@ -251,7 +257,7 @@ def engine_panels():
         @classmethod
         def poll(cls, context):
             return context.object and context.scene.render.engine == 'DREAM_TEXTURES'
-        
+
         def draw_header(self, context):
             object = context.object
             if object:

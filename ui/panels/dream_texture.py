@@ -20,6 +20,9 @@ from ...generator_process.models import Pipeline, FixItError
 
 def dream_texture_panels():
     for space_type in SPACE_TYPES:
+
+
+
         class DreamTexturePanel(Panel):
             """Creates a Panel in the scene context of the properties editor"""
             bl_label = "Dream Texture"
@@ -31,10 +34,10 @@ def dream_texture_panels():
             @classmethod
             def poll(cls, context):
                 if cls.bl_space_type == 'NODE_EDITOR':
-                    return context.area.ui_type == "ShaderNodeTree" or context.area.ui_type == "CompositorNodeTree"
+                    return context.area.ui_type in ["ShaderNodeTree", "CompositorNodeTree"]
                 else:
                     return True
-            
+
             def draw_header_preset(self, context):
                 layout = self.layout
                 layout.operator(ImportPromptFile.bl_idname, text="", icon="IMPORT")
@@ -54,6 +57,7 @@ def dream_texture_panels():
                 if Pipeline[context.scene.dream_textures_prompt.pipeline].model():
                     layout.prop(context.scene.dream_textures_prompt, 'model')
 
+
         DreamTexturePanel.__name__ = f"DREAM_PT_dream_panel_{space_type}"
         yield DreamTexturePanel
 
@@ -68,9 +72,11 @@ def dream_texture_panels():
                         init_image = context.scene.init_img
                     case 'open_editor':
                         for area in context.screen.areas:
-                            if area.type == 'IMAGE_EDITOR':
-                                if area.spaces.active.image is not None:
-                                    init_image = area.spaces.active.image
+                            if (
+                                area.type == 'IMAGE_EDITOR'
+                                and area.spaces.active.image is not None
+                            ):
+                                init_image = area.spaces.active.image
             context.scene.seamless_result.check(init_image)
             return context.scene.seamless_result
 
@@ -100,6 +106,9 @@ def create_panel(space_type, region_type, parent_id, ctor, get_prompt, use_prope
     return ctor(kwargs.pop('base_panel', SubPanel), space_type, get_prompt, **kwargs)
 
 def prompt_panel(sub_panel, space_type, get_prompt, get_seamless_result=None):
+
+
+
     class PromptPanel(sub_panel):
         """Create a subpanel for prompt input"""
         bl_label = "Prompt"
@@ -118,10 +127,10 @@ def prompt_panel(sub_panel, space_type, get_prompt, get_seamless_result=None):
             structure = next(x for x in prompt_structures if x.id == prompt.prompt_structure)
             for segment in structure.structure:
                 segment_row = layout.row()
-                enum_prop = 'prompt_structure_token_' + segment.id + '_enum'
+                enum_prop = f'prompt_structure_token_{segment.id}_enum'
                 is_custom = getattr(prompt, enum_prop) == 'custom'
                 if is_custom:
-                    segment_row.prop(prompt, 'prompt_structure_token_' + segment.id)
+                    segment_row.prop(prompt, f'prompt_structure_token_{segment.id}')
                 enum_cases = DreamPrompt.__annotations__[enum_prop].keywords['items']
                 if len(enum_cases) != 1 or enum_cases[0][0] != 'custom':
                     segment_row.prop(prompt, enum_prop, icon_only=is_custom)
@@ -133,6 +142,7 @@ def prompt_panel(sub_panel, space_type, get_prompt, get_seamless_result=None):
                     auto_row = self.layout.row()
                     auto_row.enabled = False
                     auto_row.prop(get_seamless_result(context, prompt), "result")
+
 
     yield PromptPanel
 
@@ -181,6 +191,9 @@ def size_panel(sub_panel, space_type, get_prompt):
     return SizePanel
 
 def init_image_panels(sub_panel, space_type, get_prompt):
+
+
+
     class InitImagePanel(sub_panel):
         """Create a subpanel for init image options"""
         bl_idname = f"DREAM_PT_dream_panel_init_image_{space_type}"
@@ -195,12 +208,12 @@ def init_image_panels(sub_panel, space_type, get_prompt):
             layout = self.layout
             prompt = get_prompt(context)
             layout.enabled = prompt.use_init_img
-            
+
             layout.prop(prompt, "init_img_src", expand=True)
             if prompt.init_img_src == 'file':
                 layout.template_ID(context.scene, "init_img", open="image.open")
             layout.prop(prompt, "init_img_action", expand=True)
-            
+
             layout.use_property_split = True
 
             if prompt.init_img_action == 'inpaint':
@@ -214,18 +227,22 @@ def init_image_panels(sub_panel, space_type, get_prompt):
                 def _outpaint_warning_box(warning):
                     box = layout.box()
                     box.label(text=warning, icon="ERROR")
+
                 if prompt.outpaint_origin[0] <= -prompt.width or prompt.outpaint_origin[1] <= -prompt.height:
                     _outpaint_warning_box("Outpaint has no overlap, so the result will not blend")
                 init_img = context.scene.init_img if prompt.init_img_src == 'file' else None
                 if init_img is None:
                     for area in context.screen.areas:
-                        if area.type == 'IMAGE_EDITOR':
-                            if area.spaces.active.image is not None:
-                                init_img = area.spaces.active.image
-                if init_img is not None:
-                    if prompt.outpaint_origin[0] >= init_img.size[0] or \
-                        prompt.outpaint_origin[1] >= init_img.size[1]:
-                        _outpaint_warning_box("Outpaint has no overlap, so the result will not blend")
+                        if (
+                            area.type == 'IMAGE_EDITOR'
+                            and area.spaces.active.image is not None
+                        ):
+                            init_img = area.spaces.active.image
+                if init_img is not None and (
+                    prompt.outpaint_origin[0] >= init_img.size[0]
+                    or prompt.outpaint_origin[1] >= init_img.size[1]
+                ):
+                    _outpaint_warning_box("Outpaint has no overlap, so the result will not blend")
             elif prompt.init_img_action == 'modify':
                 layout.prop(prompt, "fit")
             layout.prop(prompt, "strength")
@@ -235,6 +252,8 @@ def init_image_panels(sub_panel, space_type, get_prompt):
                 layout.prop(prompt, "modify_action_source_type")
                 if prompt.modify_action_source_type == 'depth_map':
                     layout.template_ID(context.scene, "init_depth", open="image.open")
+
+
     yield InitImagePanel
 
 def control_net_panel(sub_panel, space_type, get_prompt):

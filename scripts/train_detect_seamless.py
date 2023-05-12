@@ -323,10 +323,7 @@ def save_npz(path, state_dict):
 
 def load_npz(path):
     state_dict_np: dict[str, NDArray] = np.load(path, allow_pickle=False)
-    state_dict_torch = dict()
-    for name, arr in state_dict_np.items():
-        state_dict_torch[name] = torch.from_numpy(arr)
-    return state_dict_torch
+    return {name: torch.from_numpy(arr) for name, arr in state_dict_np.items()}
 
 
 def main():
@@ -375,7 +372,7 @@ def main():
             valid_datasets.append(v)
 
     try:
-        if len(train_datasets) > 0:
+        if train_datasets:
             train(model, train_datasets, valid_datasets, epochs=50, training_rate=0.001)
             # It should easily converge in under 50 epochs.
             # Training rate is a little high, but I've never managed better

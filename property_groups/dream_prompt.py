@@ -231,11 +231,18 @@ def map_structure_token_items(value):
 for structure in prompt_structures:
     for token in structure.structure:
         if not isinstance(token, str):
-            attributes['prompt_structure_token_' + token.id] = StringProperty(name=token.label)
-            attributes['prompt_structure_token_' + token.id + '_enum'] = EnumProperty(
+            attributes[f'prompt_structure_token_{token.id}'] = StringProperty(
+                name=token.label
+            )
+            attributes[
+                f'prompt_structure_token_{token.id}_enum'
+            ] = EnumProperty(
                 name=token.label,
-                items=[('custom', 'Custom', '')] + list(map(map_structure_token_items, token.values)),
-                default='custom' if len(token.values) == 0 else token.values[0][0],
+                items=[('custom', 'Custom', '')]
+                + list(map(map_structure_token_items, token.values)),
+                default='custom'
+                if len(token.values) == 0
+                else token.values[0][0],
             )
 
 DreamPrompt = type('DreamPrompt', (bpy.types.PropertyGroup,), {
@@ -253,9 +260,9 @@ def generate_prompt(self):
         __delattr__ = dict.__delitem__
     tokens = {}
     for segment in structure.structure:
-        enum_value = getattr(self, 'prompt_structure_token_' + segment.id + '_enum')
+        enum_value = getattr(self, f'prompt_structure_token_{segment.id}_enum')
         if enum_value == 'custom':
-            tokens[segment.id] = getattr(self, 'prompt_structure_token_' + segment.id)
+            tokens[segment.id] = getattr(self, f'prompt_structure_token_{segment.id}')
         else:
             tokens[segment.id] = next(x for x in segment.values if x[0] == enum_value)[1]
     return structure.generate(dotdict(tokens))
@@ -264,7 +271,7 @@ def get_prompt_subject(self):
     structure = next(x for x in prompt_structures if x.id == self.prompt_structure)
     for segment in structure.structure:
         if segment.id == 'subject':
-            return getattr(self, 'prompt_structure_token_' + segment.id)
+            return getattr(self, f'prompt_structure_token_{segment.id}')
     return self.generate_prompt()
 
 def get_seed(self):

@@ -241,10 +241,8 @@ def convert_original_stable_diffusion_to_diffusers(
         use_linear_projection = (
             unet_params.use_linear_in_transformer if "use_linear_in_transformer" in unet_params else False
         )
-        if use_linear_projection:
-            # stable diffusion 2-base-512 and 2-768
-            if head_dim is None:
-                head_dim = [5, 10, 20, 20]
+        if use_linear_projection and head_dim is None:
+            head_dim = [5, 10, 20, 20]
 
         config = dict(
             sample_size=image_size // vae_scale_factor,
@@ -260,6 +258,7 @@ def convert_original_stable_diffusion_to_diffusers(
         )
 
         return config
+
 
 
     def create_vae_diffusers_config(original_config, image_size: int):
@@ -732,8 +731,9 @@ def convert_original_stable_diffusion_to_diffusers(
         #    text_model.load_state_dict(text_model_dict)
 
         return text_model
+
     #endregion
-    
+
     prediction_type = None
     image_size = None
     scheduler_type = "pndm"
@@ -748,13 +748,6 @@ def convert_original_stable_diffusion_to_diffusers(
     key_name = "model.diffusion_model.input_blocks.2.1.transformer_blocks.0.attn2.to_k.weight"
 
     original_config = model_config.original_config
-    # if key_name in checkpoint and checkpoint[key_name].shape[-1] == 1024:
-    #     # model_type = "v2"
-    #     original_config = {'model': {'base_learning_rate': 0.0001, 'target': 'ldm.models.diffusion.ddpm.LatentDiffusion', 'params': {'parameterization': 'v', 'linear_start': 0.00085, 'linear_end': 0.012, 'num_timesteps_cond': 1, 'log_every_t': 200, 'timesteps': 1000, 'first_stage_key': 'jpg', 'cond_stage_key': 'txt', 'image_size': 64, 'channels': 4, 'cond_stage_trainable': False, 'conditioning_key': 'crossattn', 'monitor': 'val/loss_simple_ema', 'scale_factor': 0.18215, 'use_ema': False, 'unet_config': {'target': 'ldm.modules.diffusionmodules.openaimodel.UNetModel', 'params': {'use_checkpoint': True, 'use_fp16': True, 'image_size': 32, 'in_channels': 4, 'out_channels': 4, 'model_channels': 320, 'attention_resolutions': [4, 2, 1], 'num_res_blocks': 2, 'channel_mult': [1, 2, 4, 4], 'num_head_channels': 64, 'use_spatial_transformer': True, 'use_linear_in_transformer': True, 'transformer_depth': 1, 'context_dim': 1024, 'legacy': False}}, 'first_stage_config': {'target': 'ldm.models.autoencoder.AutoencoderKL', 'params': {'embed_dim': 4, 'monitor': 'val/rec_loss', 'ddconfig': {'double_z': True, 'z_channels': 4, 'resolution': 256, 'in_channels': 3, 'out_ch': 3, 'ch': 128, 'ch_mult': [1, 2, 4, 4], 'num_res_blocks': 2, 'attn_resolutions': [], 'dropout': 0.0}, 'lossconfig': {'target': 'torch.nn.Identity'}}}, 'cond_stage_config': {'target': 'ldm.modules.encoders.modules.FrozenOpenCLIPEmbedder', 'params': {'freeze': True, 'layer': 'penultimate'}}}}}
-    # else:
-    #     # model_type = "v1"
-    #     original_config = {'model': {'base_learning_rate': 0.0001, 'target': 'ldm.models.diffusion.ddpm.LatentDiffusion', 'params': {'linear_start': 0.00085, 'linear_end': 0.012, 'num_timesteps_cond': 1, 'log_every_t': 200, 'timesteps': 1000, 'first_stage_key': 'jpg', 'cond_stage_key': 'txt', 'image_size': 64, 'channels': 4, 'cond_stage_trainable': False, 'conditioning_key': 'crossattn', 'monitor': 'val/loss_simple_ema', 'scale_factor': 0.18215, 'use_ema': False, 'scheduler_config': {'target': 'ldm.lr_scheduler.LambdaLinearScheduler', 'params': {'warm_up_steps': [10000], 'cycle_lengths': [10000000000000], 'f_start': [1e-06], 'f_max': [1.0], 'f_min': [1.0]}}, 'unet_config': {'target': 'ldm.modules.diffusionmodules.openaimodel.UNetModel', 'params': {'image_size': 32, 'in_channels': 4, 'out_channels': 4, 'model_channels': 320, 'attention_resolutions': [4, 2, 1], 'num_res_blocks': 2, 'channel_mult': [1, 2, 4, 4], 'num_heads': 8, 'use_spatial_transformer': True, 'transformer_depth': 1, 'context_dim': 768, 'use_checkpoint': True, 'legacy': False}}, 'first_stage_config': {'target': 'ldm.models.autoencoder.AutoencoderKL', 'params': {'embed_dim': 4, 'monitor': 'val/rec_loss', 'ddconfig': {'double_z': True, 'z_channels': 4, 'resolution': 256, 'in_channels': 3, 'out_ch': 3, 'ch': 128, 'ch_mult': [1, 2, 4, 4], 'num_res_blocks': 2, 'attn_resolutions': [], 'dropout': 0.0}, 'lossconfig': {'target': 'torch.nn.Identity'}}}, 'cond_stage_config': {'target': 'ldm.modules.encoders.modules.FrozenCLIPEmbedder'}}}}
-
     class dotdict(dict):
         __getattr__ = dict.get
         __setattr__ = dict.__setitem__
@@ -885,6 +878,6 @@ def convert_original_stable_diffusion_to_diffusers(
         text_model = convert_ldm_bert_checkpoint(checkpoint, text_config)
         tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
         pipe = LDMTextToImagePipeline(vqvae=vae, bert=text_model, tokenizer=tokenizer, unet=unet, scheduler=scheduler)
-    
+
     pipe.save_pretrained(dump_path)
     return dump_path

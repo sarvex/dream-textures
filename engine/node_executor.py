@@ -18,24 +18,36 @@ def execute_node(node, context, cache):
             }
         case 'GROUP_OUTPUT':
             return [
-                (input.name, cache[input.links[0].from_socket.node][input.links[0].from_socket.name])
-                for input in node.inputs if len(input.links) > 0
+                (
+                    input.name,
+                    cache[input.links[0].from_socket.node][
+                        input.links[0].from_socket.name
+                    ],
+                )
+                for input in node.inputs
+                if len(input.links) > 0
             ]
         case _:
             if node in cache:
                 return cache[node]
             kwargs = {
-                input.name.lower().replace(' ', '_'): ([
-                    cache[link.from_socket.node][link.from_socket.name]
-                    for link in input.links
-                ] if len(input.links) > 1 else cache[input.links[0].from_socket.node][input.links[0].from_socket.name])
-                if input.is_linked else getattr(input, 'default_value', None)
+                input.name.lower().replace(' ', '_'): (
+                    [
+                        cache[link.from_socket.node][link.from_socket.name]
+                        for link in input.links
+                    ]
+                    if len(input.links) > 1
+                    else cache[input.links[0].from_socket.node][
+                        input.links[0].from_socket.name
+                    ]
+                )
+                if input.is_linked
+                else getattr(input, 'default_value', None)
                 for input in node.inputs
             }
             if node.type == 'GROUP_OUTPUT':
                 return list(kwargs.values())[0]
-            result = node.execute(context, **kwargs)
-            return result
+            return node.execute(context, **kwargs)
 
 def execute(node_tree, depsgraph, node_begin=lambda node: None, node_update=lambda result: None, node_end=lambda node: None, test_break=lambda: False):
     output = next(n for n in node_tree.nodes if n.type == 'GROUP_OUTPUT')

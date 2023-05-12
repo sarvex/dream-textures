@@ -210,13 +210,17 @@ class StableDiffusionPreferences(bpy.types.AddonPreferences):
                         spec = importlib.util.find_spec(package)
                         if spec is not None:
                             conflicting_package_specs[package] = spec
-                    if len(conflicting_package_specs) > 0:
+                    if conflicting_package_specs:
                         conflicts_box = layout.box()
                         conflicts_box.label(text="WARNING", icon="ERROR")
                         conflicts_box.label(text=f"The following packages conflict with Dream Textures: {', '.join(conflicting_packages)}")
-                        conflicts_box.label(text=f"You may need to run Blender as an administrator to remove these packages")
+                        conflicts_box.label(
+                            text="You may need to run Blender as an administrator to remove these packages"
+                        )
                         conflicts_box.operator(UninstallDependencies.bl_idname, text="Uninstall Conflicting Packages", icon="CANCEL").conflicts = ' '.join(conflicting_packages)
-                        conflicts_box.label(text=f"If the button above fails, you can remove the following folders manually:")
+                        conflicts_box.label(
+                            text="If the button above fails, you can remove the following folders manually:"
+                        )
                         for package in conflicting_packages:
                             if package not in conflicting_package_specs:
                                 continue
@@ -235,7 +239,7 @@ class StableDiffusionPreferences(bpy.types.AddonPreferences):
                     search_box.label(text="Search Hugging Face Hub for more compatible models.")
 
                     search_box.prop(self, "model_query", text="", icon="VIEWZOOM")
-                    
+
                     if len(self.model_results) > 0:
                         search_box.template_list(PREFERENCES_UL_ModelList.__name__, "dream_textures_model_results", self, "model_results", self, "active_model_result")
 
@@ -244,12 +248,12 @@ class StableDiffusionPreferences(bpy.types.AddonPreferences):
                     auth_row = search_box.row()
                     auth_row.prop(self, "hf_token", text="Token")
                     auth_row.operator(OpenURL.bl_idname, text="Get Your Token", icon="KEYINGSET").url = "https://huggingface.co/settings/tokens"
-                    
+
                     search_box.prop(self, "prefer_fp16_revision")
 
                 layout.template_list(PREFERENCES_UL_ModelList.__name__, "dream_textures_installed_models", self, "installed_models", self, "active_installed_model")
                 layout.operator(ImportWeights.bl_idname, icon='IMPORT')
-            
+
             dream_studio_box = layout.box()
             dream_studio_box.label(text=f"DreamStudio{' (Optional)' if has_local else ''}", icon="HIDE_OFF")
             dream_studio_box.label(text=f"Link to your DreamStudio account to run in the cloud{' instead of locally.' if has_local else '.'}")
@@ -264,7 +268,7 @@ class StableDiffusionPreferences(bpy.types.AddonPreferences):
                 complete_box.label(text="1. Open an Image Editor or Shader Editor space")
                 complete_box.label(text="2. Enable 'View' > 'Sidebar'")
                 complete_box.label(text="3. Select the 'Dream' tab")
-            
+
             if default_presets_missing():
                 presets_box = layout.box()
                 presets_box.label(text="Default Presets", icon="PRESET")
@@ -277,7 +281,7 @@ class StableDiffusionPreferences(bpy.types.AddonPreferences):
             missing_dependencies_box.label(text="You've likely downloaded source instead of release by accident.")
             missing_dependencies_box.label(text="Follow the instructions to install for your platform.")
             missing_dependencies_box.operator(OpenLatestVersion.bl_idname, text="Download Latest Release")
-        
+
         contributors_box = layout.box()
         contributors_box.label(text="Contributors", icon="COMMUNITY")
         contributors_box.label(text="Dream Textures is made possible by the contributors on GitHub.")

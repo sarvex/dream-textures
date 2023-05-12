@@ -35,35 +35,69 @@ Select a different pipeline below.""",
             if not Pipeline.local_available():
                 raise FixItError(
                     "Local generation is not available for the variant of the add-on you have installed. Choose a different Pipeline such as 'DreamStudio'",
-                    lambda _, layout: layout.prop(self, "pipeline")
+                    lambda _, layout: layout.prop(self, "pipeline"),
                 )
 
-            installed_models = context.preferences.addons[StableDiffusionPreferences.bl_idname].preferences.installed_models
-            model = next((m for m in installed_models if m.model_base == self.model), None)
+            installed_models = context.preferences.addons[
+                StableDiffusionPreferences.bl_idname
+            ].preferences.installed_models
+            model = next(
+                (m for m in installed_models if m.model_base == self.model),
+                None,
+            )
             if model is None:
-                raise FixItError("No model selected.", lambda _, layout: layout.prop(self, "model"))
-            else:
-                if model.model_type != task.name:
-                    def fix_model(context, layout):
-                        layout.prop(self, "model")
-                        if not any(m.model_type == task.name for m in installed_models):
-                            if not _template_model_download_progress(context, layout):
-                                layout.label(text="You do not have any compatible models downloaded:")
-                                install_model = layout.operator(InstallModel.bl_idname, text=f"Download {task.recommended_model()} (Recommended)", icon="IMPORT")
-                                install_model.model = task.recommended_model()
-                                install_model.prefer_fp16_revision = context.preferences.addons[StableDiffusionPreferences.bl_idname].preferences.prefer_fp16_revision
-                    raise FixItError(
-                        f"""Incorrect model type selected for {task.name.replace('_', ' ').lower()} tasks.
+                raise FixItError(
+                    "No model selected.",
+                    lambda _, layout: layout.prop(self, "model"),
+                )
+            if model.model_type != task.name:
+
+                def fix_model(context, layout):
+                    layout.prop(self, "model")
+                    if all(
+                        m.model_type != task.name for m in installed_models
+                    ) and not _template_model_download_progress(
+                        context, layout
+                    ):
+                        layout.label(
+                            text="You do not have any compatible models downloaded:"
+                        )
+                        install_model = layout.operator(
+                            InstallModel.bl_idname,
+                            text=f"Download {task.recommended_model()} (Recommended)",
+                            icon="IMPORT",
+                        )
+                        install_model.model = task.recommended_model()
+                        install_model.prefer_fp16_revision = (
+                            context.preferences.addons[
+                                StableDiffusionPreferences.bl_idname
+                            ].preferences.prefer_fp16_revision
+                        )
+
+                raise FixItError(
+                    f"""Incorrect model type selected for {task.name.replace('_', ' ').lower()} tasks.
 The selected model is for {model.model_type.replace('_', ' ').lower()}.
 Select a different model below.""",
-                        fix_model
-                    )
+                    fix_model,
+                )
         case Pipeline.STABILITY_SDK:
-            if len(context.preferences.addons[StableDiffusionPreferences.bl_idname].preferences.dream_studio_key) <= 0:
+            if (
+                len(
+                    context.preferences.addons[
+                        StableDiffusionPreferences.bl_idname
+                    ].preferences.dream_studio_key
+                )
+                <= 0
+            ):
                 raise FixItError(
                     f"""No DreamStudio key entered.
 Enter your API key below{', or change the pipeline' if Pipeline.local_available() else ''}.""",
-                    lambda ctx, layout: layout.prop(ctx.preferences.addons[StableDiffusionPreferences.bl_idname].preferences, "dream_studio_key")
+                    lambda ctx, layout: layout.prop(
+                        ctx.preferences.addons[
+                            StableDiffusionPreferences.bl_idname
+                        ].preferences,
+                        "dream_studio_key",
+                    ),
                 )
 
     init_image = None
@@ -73,9 +107,11 @@ Enter your API key below{', or change the pipeline' if Pipeline.local_available(
                 init_image = context.scene.init_img
             case 'open_editor':
                 for area in context.screen.areas:
-                    if area.type == 'IMAGE_EDITOR':
-                        if area.spaces.active.image is not None:
-                            init_image = area.spaces.active.image
+                    if (
+                        area.type == 'IMAGE_EDITOR'
+                        and area.spaces.active.image is not None
+                    ):
+                        init_image = area.spaces.active.image
         if init_image is not None and init_image.type == 'RENDER_RESULT':
             def fix_init_img(ctx, layout):
                 layout.prop(self, "init_img_src", expand=True)

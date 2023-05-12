@@ -10,7 +10,7 @@ from .detect_seamless import SeamlessAxes
 def inpaint(
     self,
     pipeline: Pipeline,
-    
+
     model: str,
 
     scheduler: Scheduler,
@@ -29,7 +29,7 @@ def inpaint(
     cfg_scale: float,
     use_negative_prompt: bool,
     negative_prompt: str,
-    
+
     seamless_axes: SeamlessAxes | str | bool | tuple[bool, bool] | None,
 
     iterations: int,
@@ -52,7 +52,6 @@ def inpaint(
             from PIL import Image, ImageOps
             import PIL.Image
 
-            # Mostly copied from `diffusers.StableDiffusionInpaintPipeline`, with slight modifications to yield the latents at each step.
             class GeneratorPipeline(diffusers.StableDiffusionInpaintPipeline):
                 @torch.no_grad()
                 def __call__(
@@ -67,17 +66,27 @@ def inpaint(
                     negative_prompt: Optional[Union[str, List[str]]] = None,
                     num_images_per_prompt: Optional[int] = 1,
                     eta: float = 0.0,
-                    generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+                    generator: Optional[
+                        Union[torch.Generator, List[torch.Generator]]
+                    ] = None,
                     latents: Optional[torch.FloatTensor] = None,
                     output_type: Optional[str] = "pil",
                     return_dict: bool = True,
-                    callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+                    callback: Optional[
+                        Callable[[int, int, torch.FloatTensor], None]
+                    ] = None,
                     callback_steps: Optional[int] = 1,
                     **kwargs,
                 ):
                     # 0. Default height and width to unet
-                    height = height or self.unet.config.sample_size * self.vae_scale_factor
-                    width = width or self.unet.config.sample_size * self.vae_scale_factor
+                    height = (
+                        height
+                        or self.unet.config.sample_size * self.vae_scale_factor
+                    )
+                    width = (
+                        width
+                        or self.unet.config.sample_size * self.vae_scale_factor
+                    )
 
                     # 1. Check inputs
                     self.check_inputs(prompt, height, width, callback_steps)
@@ -92,14 +101,25 @@ def inpaint(
 
                     # 3. Encode input prompt
                     text_embeddings = self._encode_prompt(
-                        prompt, device, num_images_per_prompt, do_classifier_free_guidance, negative_prompt
+                        prompt,
+                        device,
+                        num_images_per_prompt,
+                        do_classifier_free_guidance,
+                        negative_prompt,
                     )
 
                     # 4. Preprocess mask and image
-                    mask, masked_image = diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint.prepare_mask_and_masked_image(image, mask_image)
+                    (
+                        mask,
+                        masked_image,
+                    ) = diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_inpaint.prepare_mask_and_masked_image(
+                        image, mask_image
+                    )
 
                     # 5. set timesteps
-                    self.scheduler.set_timesteps(num_inference_steps, device=device)
+                    self.scheduler.set_timesteps(
+                        num_inference_steps, device=device
+                    )
                     timesteps = self.scheduler.timesteps
 
                     # 6. Prepare latent variables
@@ -131,46 +151,104 @@ def inpaint(
                     # 8. Check that sizes of mask, masked image and latents match
                     num_channels_mask = mask.shape[1]
                     num_channels_masked_image = masked_image_latents.shape[1]
-                    if num_channels_latents + num_channels_mask + num_channels_masked_image != self.unet.config.in_channels:
+                    if (
+                        num_channels_latents
+                        + num_channels_mask
+                        + num_channels_masked_image
+                        != self.unet.config.in_channels
+                    ):
                         raise ValueError(
-                            f"Select an inpainting model, such as 'stabilityai/stable-diffusion-2-inpainting'"
+                            "Select an inpainting model, such as 'stabilityai/stable-diffusion-2-inpainting'"
                         )
 
                     # 9. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
-                    extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
+                    extra_step_kwargs = self.prepare_extra_step_kwargs(
+                        generator, eta
+                    )
 
                     # 10. Denoising loop
-                    num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
-                    with self.progress_bar(total=num_inference_steps) as progress_bar:
+                    num_warmup_steps = (
+                        len(timesteps)
+                        - num_inference_steps * self.scheduler.order
+                    )
+                    with self.progress_bar(
+                        total=num_inference_steps
+                    ) as progress_bar:
                         for i, t in enumerate(timesteps):
                             # NOTE: Modified to support disabling CFG
-                            if do_classifier_free_guidance and (i / len(timesteps)) >= kwargs['cfg_end']:
+                            if (
+                                do_classifier_free_guidance
+                                and (i / len(timesteps)) >= kwargs['cfg_end']
+                            ):
                                 do_classifier_free_guidance = False
-                                text_embeddings = text_embeddings[text_embeddings.size(0) // 2:]
-                                mask = mask[mask.size(0) // 2:]
-                                masked_image_latents = masked_image_latents[masked_image_latents.size(0) // 2:]
+                                text_embeddings = text_embeddings[
+                                    text_embeddings.size(0) // 2 :
+                                ]
+                                mask = mask[mask.size(0) // 2 :]
+                                masked_image_latents = masked_image_latents[
+                                    masked_image_latents.size(0) // 2 :
+                                ]
                             # expand the latents if we are doing classifier free guidance
-                            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                            latent_model_input = (
+                                torch.cat([latents] * 2)
+                                if do_classifier_free_guidance
+                                else latents
+                            )
 
                             # concat latents, mask, masked_image_latents in the channel dimension
-                            latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
-                            latent_model_input = torch.cat([latent_model_input, mask, masked_image_latents], dim=1)
+                            latent_model_input = (
+                                self.scheduler.scale_model_input(
+                                    latent_model_input, t
+                                )
+                            )
+                            latent_model_input = torch.cat(
+                                [
+                                    latent_model_input,
+                                    mask,
+                                    masked_image_latents,
+                                ],
+                                dim=1,
+                            )
 
                             # predict the noise residual
-                            noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
+                            noise_pred = self.unet(
+                                latent_model_input,
+                                t,
+                                encoder_hidden_states=text_embeddings,
+                            ).sample
 
                             # perform guidance
                             if do_classifier_free_guidance:
-                                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                                (
+                                    noise_pred_uncond,
+                                    noise_pred_text,
+                                ) = noise_pred.chunk(2)
+                                noise_pred = (
+                                    noise_pred_uncond
+                                    + guidance_scale
+                                    * (noise_pred_text - noise_pred_uncond)
+                                )
 
                             # compute the previous noisy sample x_t -> x_t-1
-                            latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+                            latents = self.scheduler.step(
+                                noise_pred, t, latents, **extra_step_kwargs
+                            ).prev_sample
 
-                            if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                            if i == len(timesteps) - 1 or (
+                                (i + 1) > num_warmup_steps
+                                and (i + 1) % self.scheduler.order == 0
+                            ):
                                 progress_bar.update()
                             # NOTE: Modified to yield the latents instead of calling a callback.
-                            yield ImageGenerationResult.step_preview(self, kwargs['step_preview_mode'], width, height, latents, generator, i)
+                            yield ImageGenerationResult.step_preview(
+                                self,
+                                kwargs['step_preview_mode'],
+                                width,
+                                height,
+                                latents,
+                                generator,
+                                i,
+                            )
 
                     # 11. Post-processing
                     image = self.decode_latents(latents)
@@ -180,25 +258,40 @@ def inpaint(
                     # image, has_nsfw_concept = self.run_safety_checker(image, device, text_embeddings.dtype)
 
                     # Offload last model to CPU
-                    if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
+                    if (
+                        hasattr(self, "final_offload_hook")
+                        and self.final_offload_hook is not None
+                    ):
                         self.final_offload_hook.offload()
 
-                    # NOTE: Modified to yield the decoded image as a numpy array.
+                        # NOTE: Modified to yield the decoded image as a numpy array.
                     yield ImageGenerationResult(
-                        [np.asarray(ImageOps.flip(image).convert('RGBA'), dtype=np.float32) / 255.
-                            for i, image in enumerate(self.numpy_to_pil(image))],
-                        [gen.initial_seed() for gen in generator] if isinstance(generator, list) else [generator.initial_seed()],
+                        [
+                            np.asarray(
+                                ImageOps.flip(image).convert('RGBA'),
+                                dtype=np.float32,
+                            )
+                            / 255.0
+                            for image in self.numpy_to_pil(image)
+                        ],
+                        [gen.initial_seed() for gen in generator]
+                        if isinstance(generator, list)
+                        else [generator.initial_seed()],
                         num_inference_steps,
-                        True
+                        True,
                     )
-            
-            if optimizations.cpu_only:
-                device = "cpu"
-            else:
-                device = self.choose_device()
 
+            device = "cpu" if optimizations.cpu_only else self.choose_device()
             # StableDiffusionPipeline w/ caching
-            pipe = load_pipe(self, "inpaint", GeneratorPipeline, model, optimizations, scheduler, device)
+            pipe = load_pipe(
+                self,
+                "inpaint",
+                GeneratorPipeline,
+                model,
+                optimizations,
+                scheduler,
+                device,
+            )
 
             # Optimizations
             pipe = optimizations.apply(pipe, device)
@@ -207,34 +300,76 @@ def inpaint(
             batch_size = len(prompt) if isinstance(prompt, list) else 1
             generator = []
             for _ in range(batch_size):
-                gen = torch.Generator(device="cpu" if device in ("mps", "privateuseone") else device) # MPS and DML do not support the `Generator` API
-                generator.append(gen.manual_seed(random.randrange(0, np.iinfo(np.uint32).max) if seed is None else seed))
+                gen = torch.Generator(
+                    device="cpu"
+                    if device in ("mps", "privateuseone")
+                    else device
+                )  # MPS and DML do not support the `Generator` API
+                generator.append(
+                    gen.manual_seed(
+                        random.randrange(0, np.iinfo(np.uint32).max)
+                        if seed is None
+                        else seed
+                    )
+                )
             if batch_size == 1:
                 # Some schedulers don't handle a list of generators: https://github.com/huggingface/diffusers/issues/1909
                 generator = generator[0]
 
             # Init Image
             init_image = Image.fromarray(image)
-            
+
             # Seamless
             if seamless_axes == SeamlessAxes.AUTO:
-                seamless_axes = self.detect_seamless(np.array(init_image) / 255)
+                seamless_axes = self.detect_seamless(
+                    np.array(init_image) / 255
+                )
             _configure_model_padding(pipe.unet, seamless_axes)
             _configure_model_padding(pipe.vae, seamless_axes)
 
             # Inference
-            with torch.inference_mode() if device not in ('mps', "privateuseone") else nullcontext():
+            with torch.inference_mode() if device not in (
+                'mps',
+                "privateuseone",
+            ) else nullcontext():
                 match inpaint_mask_src:
                     case 'alpha':
-                        mask_image = ImageOps.invert(init_image.getchannel('A'))
+                        mask_image = ImageOps.invert(
+                            init_image.getchannel('A')
+                        )
                     case 'prompt':
-                        from transformers import AutoProcessor, CLIPSegForImageSegmentation
+                        from transformers import (
+                            AutoProcessor,
+                            CLIPSegForImageSegmentation,
+                        )
 
-                        processor = AutoProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
-                        clipseg = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined")
-                        inputs = processor(text=[text_mask], images=[init_image.convert('RGB')], return_tensors="pt", padding=True)
+                        processor = AutoProcessor.from_pretrained(
+                            "CIDAS/clipseg-rd64-refined"
+                        )
+                        clipseg = CLIPSegForImageSegmentation.from_pretrained(
+                            "CIDAS/clipseg-rd64-refined"
+                        )
+                        inputs = processor(
+                            text=[text_mask],
+                            images=[init_image.convert('RGB')],
+                            return_tensors="pt",
+                            padding=True,
+                        )
                         outputs = clipseg(**inputs)
-                        mask_image = Image.fromarray(np.uint8((1 - torch.sigmoid(outputs.logits).lt(text_mask_confidence).int().detach().numpy()) * 255), 'L').resize(init_image.size)
+                        mask_image = Image.fromarray(
+                            np.uint8(
+                                (
+                                    1
+                                    - torch.sigmoid(outputs.logits)
+                                    .lt(text_mask_confidence)
+                                    .int()
+                                    .detach()
+                                    .numpy()
+                                )
+                                * 255
+                            ),
+                            'L',
+                        ).resize(init_image.size)
 
                 yield from pipe(
                     prompt=prompt,
@@ -245,7 +380,9 @@ def inpaint(
                     width=init_image.size[0] if fit else width,
                     num_inference_steps=steps,
                     guidance_scale=cfg_scale,
-                    negative_prompt=negative_prompt if use_negative_prompt else None,
+                    negative_prompt=negative_prompt
+                    if use_negative_prompt
+                    else None,
                     num_images_per_prompt=1,
                     eta=0.0,
                     generator=generator,
@@ -255,7 +392,7 @@ def inpaint(
                     callback=None,
                     callback_steps=1,
                     step_preview_mode=step_preview_mode,
-                    cfg_end=optimizations.cfg_end
+                    cfg_end=optimizations.cfg_end,
                 )
         case Pipeline.STABILITY_SDK:
             import stability_sdk.client
@@ -264,13 +401,21 @@ def inpaint(
             import io
 
             if key is None:
-                raise ValueError("DreamStudio key not provided. Enter your key in the add-on preferences.")
-            client = stability_sdk.client.StabilityInference(key=key, engine=model)
+                raise ValueError(
+                    "DreamStudio key not provided. Enter your key in the add-on preferences."
+                )
+            client = stability_sdk.client.StabilityInference(
+                key=key, engine=model
+            )
 
             if seed is None:
                 seed = random.randrange(0, np.iinfo(np.uint32).max)
 
-            init_image = Image.open(image) if isinstance(image, str) else Image.fromarray(image)
+            init_image = (
+                Image.open(image)
+                if isinstance(image, str)
+                else Image.fromarray(image)
+            )
 
             answers = client.generate(
                 prompt=prompt,
@@ -286,15 +431,29 @@ def inpaint(
             )
             for answer in answers:
                 for artifact in answer.artifacts:
-                    if artifact.finish_reason == stability_sdk.interfaces.gooseai.generation.generation_pb2.FILTER:
-                        raise ValueError("Your request activated DreamStudio's safety filter. Please modify your prompt and try again.")
-                    if artifact.type == stability_sdk.interfaces.gooseai.generation.generation_pb2.ARTIFACT_IMAGE:
+                    if (
+                        artifact.finish_reason
+                        == stability_sdk.interfaces.gooseai.generation.generation_pb2.FILTER
+                    ):
+                        raise ValueError(
+                            "Your request activated DreamStudio's safety filter. Please modify your prompt and try again."
+                        )
+                    if (
+                        artifact.type
+                        == stability_sdk.interfaces.gooseai.generation.generation_pb2.ARTIFACT_IMAGE
+                    ):
                         image = Image.open(io.BytesIO(artifact.binary))
                         yield ImageGenerationResult(
-                            [np.asarray(ImageOps.flip(image).convert('RGBA'), dtype=np.float32) / 255.],
+                            [
+                                np.asarray(
+                                    ImageOps.flip(image).convert('RGBA'),
+                                    dtype=np.float32,
+                                )
+                                / 255.0
+                            ],
                             [seed],
                             steps,
-                            True
+                            True,
                         )
 
         case _:

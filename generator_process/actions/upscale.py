@@ -17,13 +17,13 @@ class ImageUpscaleResult:
 def upscale(
     self,
     image: NDArray,
-    
+
     prompt: str,
     steps: int,
     seed: int,
     cfg_scale: float,
     scheduler: Scheduler,
-    
+
     tile_size: int,
     blend: int,
     seamless_axes: SeamlessAxes | str | bool | tuple[bool, bool] | None,
@@ -38,11 +38,7 @@ def upscale(
     import torch
     import diffusers
 
-    if optimizations.cpu_only:
-        device = "cpu"
-    else:
-        device = self.choose_device()
-
+    device = "cpu" if optimizations.cpu_only else self.choose_device()
     pipe = diffusers.StableDiffusionUpscalePipeline.from_pretrained(
         "stabilityai/stable-diffusion-x4-upscaler",
         revision="fp16" if optimizations.can_use_half(device) else None,

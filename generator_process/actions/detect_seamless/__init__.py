@@ -37,9 +37,7 @@ class SeamlessAxes(Enum):
             return True
         if other is False and self is self.OFF:
             return True
-        if other is None and self is self.AUTO:
-            return True
-        return False
+        return other is None and self is self.AUTO
 
     def __and__(self, other):
         return SeamlessAxes((self.x and other.x, self.y and other.y))

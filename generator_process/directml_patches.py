@@ -29,11 +29,7 @@ def baddbmm(input, batch1, batch2, *, beta=1, alpha=1, out=None, pre_patch):
 def pad(input, pad, mode="constant", value=None, *, pre_patch):
     if input.device.type == "privateuseone" and mode == "constant":
         pad_dims = torch.tensor(pad, dtype=torch.int32).view(-1, 2).flip(0)
-        both_ends = False
-        for pre, post in pad_dims:
-            if pre != 0 and post != 0:
-                both_ends = True
-                break
+        both_ends = any(pre != 0 and post != 0 for pre, post in pad_dims)
         if both_ends:
             if value is None:
                 value = 0

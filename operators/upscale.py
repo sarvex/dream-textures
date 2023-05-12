@@ -54,9 +54,11 @@ class Upscale(bpy.types.Operator):
             input_image = active_node.image
         else:
             for area in context.screen.areas:
-                if area.type == 'IMAGE_EDITOR':
-                    if area.spaces.active.image is not None:
-                        input_image = area.spaces.active.image
+                if (
+                    area.type == 'IMAGE_EDITOR'
+                    and area.spaces.active.image is not None
+                ):
+                    input_image = area.spaces.active.image
         if input_image is None:
             self.report({"ERROR"}, "No open image in the Image Editor space, or selected Image Texture node.")
             return {"FINISHED"}
@@ -76,6 +78,7 @@ class Upscale(bpy.types.Operator):
                     if region.type == "UI":
                         region.tag_redraw()
             return None
+
         bpy.types.Scene.dream_textures_progress = bpy.props.IntProperty(name="", default=0, min=0, max=generated_args['steps'], update=step_progress_update)
         scene.dream_textures_info = "Starting..."
 
@@ -86,7 +89,7 @@ class Upscale(bpy.types.Operator):
                 bpy.types.Scene.dream_textures_progress = bpy.props.IntProperty(name="", default=tile.tile, min=0, max=tile.total, update=step_progress_update)
             if tile.final or tile.image is None:
                 return
-            
+
             scene.dream_textures_progress = tile.tile
             last_data_block = bpy_image(f"Tile {tile.tile}/{tile.total}", tile.image.shape[1], tile.image.shape[0], tile.image.ravel(), last_data_block)
             for area in screen.areas:
@@ -109,6 +112,7 @@ class Upscale(bpy.types.Operator):
                 active_node.image = image
             scene.dream_textures_info = ""
             scene.dream_textures_progress = 0
+
         gen = Generator.shared()
         context.scene.dream_textures_upscale_prompt.prompt_structure = custom_structure.id
         f = gen.upscale(
@@ -120,5 +124,5 @@ class Upscale(bpy.types.Operator):
         f.add_response_callback(on_tile_complete)
         f.add_done_callback(image_done)
         gen._active_generation_future = f
-        
+
         return {"FINISHED"}

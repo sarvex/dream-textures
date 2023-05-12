@@ -43,16 +43,15 @@ class ControlNet:
     def control(self, context):
         if self.image is not None:
             return np.flipud(self.image)
-        else:
-            match self.control_type:
-                case ControlType.DEPTH:
-                    return np.flipud(depth.render_depth_map(context, collection=self.collection))
-                case ControlType.OPENPOSE:
-                    return np.flipud(openpose.render_openpose_map(context, collection=self.collection))
-                case ControlType.NORMAL:
-                    return np.flipud(normal.render_normal_map(context, collection=self.collection))
-                case ControlType.ADE20K_SEGMENTATION:
-                    return np.flipud(ade20k.render_ade20k_map(context, collection=self.collection))
+        match self.control_type:
+            case ControlType.DEPTH:
+                return np.flipud(depth.render_depth_map(context, collection=self.collection))
+            case ControlType.OPENPOSE:
+                return np.flipud(openpose.render_openpose_map(context, collection=self.collection))
+            case ControlType.NORMAL:
+                return np.flipud(normal.render_normal_map(context, collection=self.collection))
+            case ControlType.ADE20K_SEGMENTATION:
+                return np.flipud(ade20k.render_ade20k_map(context, collection=self.collection))
 
 def _update_stable_diffusion_sockets(self, context):
     self.inputs['Source Image'].enabled = self.task in {'image_to_image', 'depth_to_image'}

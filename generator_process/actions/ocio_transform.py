@@ -20,15 +20,15 @@ def ocio_transform(
     # A reimplementation of `OCIOImpl::createDisplayProcessor` from the Blender source.
     # https://github.com/dfelinto/blender/blob/87a0770bb969ce37d9a41a04c1658ea09c63933a/intern/opencolorio/ocio_impl.cc#L643
     def create_display_processor(
-        config,
-        input_colorspace,
-        view,
-        display,
-        look,
-        scale, # Exposure
-        exponent, # Gamma
-        inverse=False
-    ):
+            config,
+            input_colorspace,
+            view,
+            display,
+            look,
+            scale, # Exposure
+            exponent, # Gamma
+            inverse=False
+        ):
         group = OCIO.GroupTransform()
 
         # Exposure
@@ -45,9 +45,9 @@ def ocio_transform(
             # Apply scale
             matrix_transform = OCIO.MatrixTransform([scale, 0.0, 0.0, 0.0, 0.0, scale, 0.0, 0.0, 0.0, 0.0, scale, 0.0, 0.0, 0.0, 0.0, 1.0])
             group.appendTransform(matrix_transform)
-        
+
         # Add look transform
-        use_look = look is not None and len(look) > 0
+        use_look = look is not None and look != ""
         if use_look:
             look_output = config.getLook(look).getProcessSpace()
             if look_output is not None and len(look_output) > 0:
@@ -61,7 +61,7 @@ def ocio_transform(
             else:
                 # For empty looks, no output color space is returned.
                 use_look = False
-        
+
         # Add view and display transform
         display_view_transform = OCIO.DisplayViewTransform()
         display_view_transform.setSrc(input_colorspace)
@@ -74,7 +74,7 @@ def ocio_transform(
         if exponent != 1:
             exponent_transform = OCIO.ExponentTransform([exponent, exponent, exponent, 1.0])
             group.appendTransform(exponent_transform)
-        
+
         # Create processor from transform. This is the moment were OCIO validates
         # the entire transform, no need to check for the validity of inputs above.
         try:
@@ -85,7 +85,7 @@ def ocio_transform(
                 return processor
         except Exception as e:
             self.send_exception(True, msg=str(e), trace="")
-        
+
         return None
 
     # Exposure and gamma transformations derived from Blender source:

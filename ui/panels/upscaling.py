@@ -10,6 +10,9 @@ from ..space_types import SPACE_TYPES
 
 def upscaling_panels():
     for space_type in SPACE_TYPES:
+
+
+
         class UpscalingPanel(Panel):
             """Panel for AI Upscaling"""
             bl_label = "AI Upscaling"
@@ -24,7 +27,7 @@ def upscaling_panels():
                 if not Pipeline[context.scene.dream_textures_prompt.pipeline].upscaling():
                     return False
                 if cls.bl_space_type == 'NODE_EDITOR':
-                    return context.area.ui_type == "ShaderNodeTree" or context.area.ui_type == "CompositorNodeTree"
+                    return context.area.ui_type in ["ShaderNodeTree", "CompositorNodeTree"]
                 else:
                     return True
 
@@ -34,7 +37,7 @@ def upscaling_panels():
                 layout.use_property_decorate = False
 
                 prompt = context.scene.dream_textures_upscale_prompt
-                
+
                 layout.prop(prompt, "prompt_structure_token_subject")
                 layout.prop(context.scene, "dream_textures_upscale_tile_size")
                 layout.prop(context.scene, "dream_textures_upscale_blend")
@@ -49,9 +52,11 @@ def upscaling_panels():
                         init_image = active_node.image
                     else:
                         for area in context.screen.areas:
-                            if area.type == 'IMAGE_EDITOR':
-                                if area.spaces.active.image is not None:
-                                    init_image = area.spaces.active.image
+                            if (
+                                area.type == 'IMAGE_EDITOR'
+                                and area.spaces.active.image is not None
+                            ):
+                                init_image = area.spaces.active.image
                     context.scene.dream_textures_upscale_seamless_result.check(init_image)
                     auto_row = layout.row()
                     auto_row.enabled = False
@@ -62,7 +67,10 @@ def upscaling_panels():
                     warning_box.label(text="Warning", icon="ERROR")
                     warning_box.label(text="Large tile sizes consume more VRAM.")
 
+
         UpscalingPanel.__name__ = UpscalingPanel.bl_idname
+
+
         class ActionsPanel(Panel):
             """Panel for AI Upscaling Actions"""
             bl_category = "Dream"
@@ -78,7 +86,7 @@ def upscaling_panels():
                 if not Pipeline[context.scene.dream_textures_prompt.pipeline].upscaling():
                     return False
                 if cls.bl_space_type == 'NODE_EDITOR':
-                    return context.area.ui_type == "ShaderNodeTree" or context.area.ui_type == "CompositorNodeTree"
+                    return context.area.ui_type in ["ShaderNodeTree", "CompositorNodeTree"]
                 else:
                     return True
 
@@ -86,7 +94,7 @@ def upscaling_panels():
                 layout = self.layout
                 layout.use_property_split = True
                 layout.use_property_decorate = False
-                
+
                 image = None
                 for area in context.screen.areas:
                     if area.type == 'IMAGE_EDITOR':
@@ -110,6 +118,8 @@ def upscaling_panels():
                 if CancelGenerator.poll(context):
                     row.operator(CancelGenerator.bl_idname, icon="CANCEL", text="")
                 row.operator(ReleaseGenerator.bl_idname, icon="X", text="")
+
+
         yield UpscalingPanel
         advanced_panels = [*create_panel(space_type, 'UI', UpscalingPanel.bl_idname, advanced_panel, lambda context: context.scene.dream_textures_upscale_prompt)]
         outer_panel = advanced_panels[0]

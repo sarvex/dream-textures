@@ -40,22 +40,20 @@ class Future:
                     return self._responses[0]
                 case _:
                     return self._responses[-1] if last_only else self._responses
+
         if self._exception is not None:
             raise self._exception
         if self.done:
             return _response()
-        else:
-            self._done_event.wait()
-            if self._exception is not None:
-                raise self._exception
-            return _response()
+        self._done_event.wait()
+        if self._exception is not None:
+            raise self._exception
+        return _response()
     
     def exception(self):
-        if self.done:
-            return self._exception
-        else:
+        if not self.done:
             self._done_event.wait()
-            return self._exception
+        return self._exception
     
     def cancel(self):
         self.cancelled = True

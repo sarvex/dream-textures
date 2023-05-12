@@ -69,9 +69,7 @@ class UpscaleTiler:
         else:
             count = math.ceil((axis_size - tile_size) / (tile_size - blend)) + 1
             final = axis_size - tile_size
-        if count == 1:
-            return [0]
-        return [i * final // (count - 1) for i in range(count)]
+        return [0] if count == 1 else [i * final // (count - 1) for i in range(count)]
 
     def combined(self) -> NDArray:
         return self.canvas[:, :, :-1]

@@ -66,10 +66,13 @@ Select at least one face to project onto.""",
         )
 
 def dream_texture_projection_panels():
+
+
+
     class DREAM_PT_dream_panel_projection(bpy.types.Panel):
         """Creates a Dream Textures panel for projection"""
         bl_label = "Dream Texture Projection"
-        bl_idname = f"DREAM_PT_dream_panel_projection"
+        bl_idname = "DREAM_PT_dream_panel_projection"
         bl_category = "Dream"
         bl_space_type = 'VIEW_3D'
         bl_region_type = 'UI'
@@ -77,10 +80,10 @@ def dream_texture_projection_panels():
         @classmethod
         def poll(cls, context):
             if cls.bl_space_type == 'NODE_EDITOR':
-                return context.area.ui_type == "ShaderNodeTree" or context.area.ui_type == "CompositorNodeTree"
+                return context.area.ui_type in ["ShaderNodeTree", "CompositorNodeTree"]
             else:
                 return True
-        
+
         def draw_header_preset(self, context):
             layout = self.layout
             layout.operator(ImportPromptFile.bl_idname, text="", icon="IMPORT")
@@ -90,7 +93,7 @@ def dream_texture_projection_panels():
             layout = self.layout
             layout.use_property_split = True
             layout.use_property_decorate = False
-            
+
             if is_force_show_download():
                 layout.operator(OpenLatestVersion.bl_idname, icon="IMPORT", text="Download Latest Release")
             elif new_version_available():
@@ -100,17 +103,22 @@ def dream_texture_projection_panels():
             if Pipeline[context.scene.dream_textures_project_prompt.pipeline].model():
                 layout.prop(context.scene.dream_textures_project_prompt, 'model')
 
+
     yield DREAM_PT_dream_panel_projection
 
     def get_prompt(context):
         return context.scene.dream_textures_project_prompt
+
     yield from create_panel('VIEW_3D', 'UI', DREAM_PT_dream_panel_projection.bl_idname, prompt_panel, get_prompt)
     yield create_panel('VIEW_3D', 'UI', DREAM_PT_dream_panel_projection.bl_idname, size_panel, get_prompt)
     yield from create_panel('VIEW_3D', 'UI', DREAM_PT_dream_panel_projection.bl_idname, advanced_panel, get_prompt)
     def actions_panel(sub_panel, space_type, get_prompt):
+
+
+
         class ActionsPanel(sub_panel):
             """Create a subpanel for actions"""
-            bl_idname = f"DREAM_PT_dream_panel_projection_actions"
+            bl_idname = "DREAM_PT_dream_panel_projection_actions"
             bl_label = "Actions"
             bl_options = {'HIDE_HEADER'}
 
@@ -124,9 +132,9 @@ def dream_texture_projection_panels():
                 layout.prop(context.scene, "dream_textures_project_framebuffer_arguments")
                 if context.scene.dream_textures_project_framebuffer_arguments == 'color':
                     layout.prop(prompt, "strength")
-                
+
                 col = layout.column()
-                
+
                 col.prop(context.scene, "dream_textures_project_use_control_net")
                 if context.scene.dream_textures_project_use_control_net and len(prompt.control_nets) > 0:
                     col.prop(prompt.control_nets[0], "control_net", text="Depth ControlNet")
@@ -154,7 +162,7 @@ def dream_texture_projection_panels():
                 if CancelGenerator.poll(context):
                     row.operator(CancelGenerator.bl_idname, icon="CANCEL", text="")
                 row.operator(ReleaseGenerator.bl_idname, icon="X", text="")
-                
+
                 # Validation
                 try:
                     prompt.validate(context, task=None if context.scene.dream_textures_project_use_control_net else ModelType.DEPTH)
@@ -167,7 +175,10 @@ def dream_texture_projection_panels():
                     e.draw(context, error_box)
                 except Exception as e:
                     print(e)
+
+
         return ActionsPanel
+
     yield create_panel('VIEW_3D', 'UI', DREAM_PT_dream_panel_projection.bl_idname, actions_panel, get_prompt)
 
 def bake(context, mesh, src, dest, src_uv, dest_uv):
@@ -258,6 +269,7 @@ class ProjectDreamTexture(bpy.types.Operator):
                     if region.type == "UI":
                         region.tag_redraw()
             return None
+
         bpy.types.Scene.dream_textures_progress = bpy.props.IntProperty(name="", default=0, min=0, max=context.scene.dream_textures_project_prompt.steps, update=step_progress_update)
         context.scene.dream_textures_info = "Starting..."
 
@@ -283,10 +295,9 @@ class ProjectDreamTexture(bpy.types.Operator):
                         if region.type == 'WINDOW':
                             context.scene.render.resolution_x, context.scene.render.resolution_y = region.width, region.height
                     for space in area.spaces:
-                        if space.type == 'VIEW_3D':
-                            if space.overlay.show_overlays:
-                                view3d_spaces.append(space)
-                                space.overlay.show_overlays = False
+                        if space.type == 'VIEW_3D' and space.overlay.show_overlays:
+                            view3d_spaces.append(space)
+                            space.overlay.show_overlays = False
             init_img_path = tempfile.NamedTemporaryFile(suffix='.png').name
             render_filepath, file_format = context.scene.render.filepath, context.scene.render.image_settings.file_format
             context.scene.render.image_settings.file_format = 'PNG'
@@ -300,7 +311,7 @@ class ProjectDreamTexture(bpy.types.Operator):
             init_img_path = None
 
         context.scene.dream_textures_info = "Generating UVs and materials..."
-        
+
         material = bpy.data.materials.new(name="diffused-material")
         material.use_nodes = True
         image_texture_node = material.node_tree.nodes.new("ShaderNodeTexImage")
@@ -353,9 +364,9 @@ class ProjectDreamTexture(bpy.types.Operator):
             projection_matrix=context.space_data.region_3d.window_matrix,
             main_thread=True
         )
-        
+
         gen = Generator.shared()
-        
+
         texture = None
 
         def on_response(_, response):
@@ -380,7 +391,11 @@ class ProjectDreamTexture(bpy.types.Operator):
             prompt_subject = context.scene.dream_textures_project_prompt.prompt_structure_token_subject
             seed = generated[0].seeds[0]
             seed_str_length = len(str(seed))
-            trim_aware_name = (prompt_subject[:54 - seed_str_length] + '..') if len(prompt_subject) > 54 else prompt_subject
+            trim_aware_name = (
+                f'{prompt_subject[:54 - seed_str_length]}..'
+                if len(prompt_subject) > 54
+                else prompt_subject
+            )
             name_with_trimmed_prompt = f"{trim_aware_name} ({seed})"
 
             if isinstance(generated, list):
@@ -396,7 +411,7 @@ class ProjectDreamTexture(bpy.types.Operator):
             if context.scene.dream_textures_project_bake:
                 for bm, src_uv_layer in target_objects:
                     dest = bpy.data.images.new(name=f"{texture.name} (Baked)", width=texture.size[0], height=texture.size[1])
-                    
+
                     dest_uv_layer = bm.loops.layers.uv.active
                     src_uvs = np.empty((len(bm.verts), 2), dtype=np.float32)
                     dest_uvs = np.empty((len(bm.verts), 2), dtype=np.float32)
@@ -408,15 +423,17 @@ class ProjectDreamTexture(bpy.types.Operator):
                     dest.update()
                     dest.pack()
                     image_texture_node.image = dest
-        
+
         def on_exception(_, exception):
             context.scene.dream_textures_info = ""
             context.scene.dream_textures_progress = 0
             if hasattr(gen, '_active_generation_future'):
                 del gen._active_generation_future
-            eval('bpy.ops.' + NotifyResult.bl_idname)('INVOKE_DEFAULT', exception=repr(exception))
+            eval(f'bpy.ops.{NotifyResult.bl_idname}')(
+                'INVOKE_DEFAULT', exception=repr(exception)
+            )
             raise exception
-        
+
         context.scene.dream_textures_info = "Starting..."
         if context.scene.dream_textures_project_use_control_net:
             generated_args = context.scene.dream_textures_project_prompt.generate_args()

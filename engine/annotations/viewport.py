@@ -31,17 +31,18 @@ def render_viewport_color(context, width=None, height=None, matrix=None, project
                 offscreen.draw_view3d(
                     context.scene,
                     context.view_layer,
-                    next(s for s in area.spaces),
+                    next(iter(area.spaces)),
                     next(r for r in area.regions if r.type == 'WINDOW'),
                     matrix,
                     projection_matrix,
-                    do_color_management=False
+                    do_color_management=False,
                 )
             color = np.array(fb.read_color(0, 0, width, height, 4, 0, 'FLOAT').to_list())
         gpu.state.depth_test_set('NONE')
         offscreen.free()
         result = color
         e.set()
+
     if main_thread:
         _execute()
         return result
